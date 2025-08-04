@@ -37,26 +37,6 @@ jobs:
       if: steps.mission_info.outputs.miz_file != ''
       run: echo "Mission file found, proceeding with release"
       
-    - name: Update missions.json
-      if: steps.mission_info.outputs.miz_file != ''
-      run: |
-        cat > missions.json << EOF
-        {
-          "missions": [
-            {
-              "filename": "${{ steps.mission_info.outputs.miz_file }}",
-              "version": "${{ steps.mission_info.outputs.version }}",
-              "timestamp": "${{ steps.mission_info.outputs.timestamp }}",
-              "size": ${{ steps.mission_info.outputs.file_size }},
-              "changelog": "${{ github.event.head_commit.message }}",
-              "download_url": "https://github.com/${{ github.repository }}/releases/download/v${{ steps.mission_info.outputs.version }}/${{ steps.mission_info.outputs.miz_file }}"
-            }
-          ],
-          "latest_version": "${{ steps.mission_info.outputs.version }}",
-          "last_updated": "${{ steps.mission_info.outputs.timestamp }}"
-        }
-        EOF
-        
     - name: Create Release
       if: steps.mission_info.outputs.miz_file != ''
       id: create_release
@@ -87,6 +67,26 @@ jobs:
         asset_path: ./${{ steps.mission_info.outputs.miz_file }}
         asset_name: ${{ steps.mission_info.outputs.miz_file }}
         asset_content_type: application/zip
+        
+    - name: Update missions.json
+      if: steps.mission_info.outputs.miz_file != ''
+      run: |
+        cat > missions.json << EOF
+        {
+          "missions": [
+            {
+              "filename": "${{ steps.mission_info.outputs.miz_file }}",
+              "version": "${{ steps.mission_info.outputs.version }}",
+              "timestamp": "${{ steps.mission_info.outputs.timestamp }}",
+              "size": ${{ steps.mission_info.outputs.file_size }},
+              "changelog": "${{ github.event.head_commit.message }}",
+              "download_url": "https://github.com/${{ github.repository }}/releases/download/v${{ steps.mission_info.outputs.version }}/${{ steps.mission_info.outputs.miz_file }}"
+            }
+          ],
+          "latest_version": "${{ steps.mission_info.outputs.version }}",
+          "last_updated": "${{ steps.mission_info.outputs.timestamp }}"
+        }
+        EOF
         
     - name: Commit updated manifest
       if: steps.mission_info.outputs.miz_file != ''
