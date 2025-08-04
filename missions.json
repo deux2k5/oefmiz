@@ -1,0 +1,14 @@
+{
+  "missions": [
+    {
+      "filename": "OEF_169_v1.0.2.miz",
+      "version": "1.0.2",
+      "timestamp": "2025-08-04T00:00:00Z",
+      "size": null,
+      "changelog": "Initial release",
+      "download_url": ""
+    }
+  ],
+  "latest_version": "1.0.2",
+  "last_updated": "2025-08-04T00:00:00Z"
+}

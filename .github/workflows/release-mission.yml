@@ -1,0 +1,84 @@
+name: Release DCS Mission
+
+on:
+  push:
+    paths:
+      - '*.miz'
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Get mission file info
+      id: mission_info
+      run: |
+        MIZ_FILE=$(ls *.miz | head -1)
+        echo "miz_file=$MIZ_FILE" >> $GITHUB_OUTPUT
+        VERSION=$(echo $MIZ_FILE | grep -oP 'v\K[0-9]+\.[0-9]+\.[0-9]+')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+        FILE_SIZE=$(stat -c%s "$MIZ_FILE")
+        echo "file_size=$FILE_SIZE" >> $GITHUB_OUTPUT
+        
+    - name: Update missions.json
+      run: |
+        cat > missions.json << EOF
+        {
+          "missions": [
+            {
+              "filename": "${{ steps.mission_info.outputs.miz_file }}",
+              "version": "${{ steps.mission_info.outputs.version }}",
+              "timestamp": "${{ steps.mission_info.outputs.timestamp }}",
+              "size": ${{ steps.mission_info.outputs.file_size }},
+              "changelog": "${{ github.event.head_commit.message }}",
+              "download_url": "https://github.com/${{ github.repository }}/releases/download/v${{ steps.mission_info.outputs.version }}/${{ steps.mission_info.outputs.miz_file }}"
+            }
+          ],
+          "latest_version": "${{ steps.mission_info.outputs.version }}",
+          "last_updated": "${{ steps.mission_info.outputs.timestamp }}"
+        }
+        EOF
+        
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.mission_info.outputs.version }}
+        release_name: Mission v${{ steps.mission_info.outputs.version }}
+        body: |
+          ## DCS Mission Release
+          
+          **Version:** ${{ steps.mission_info.outputs.version }}
+          **Updated:** ${{ steps.mission_info.outputs.timestamp }}
+          
+          ### Changes
+          ${{ github.event.head_commit.message }}
+        draft: false
+        prerelease: false
+        
+    - name: Upload Mission File
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./${{ steps.mission_info.outputs.miz_file }}
+        asset_name: ${{ steps.mission_info.outputs.miz_file }}
+        asset_content_type: application/zip
+        
+    - name: Commit updated manifest
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add missions.json
+        git commit -m "Update missions.json for v${{ steps.mission_info.outputs.version }}"
+        git push
