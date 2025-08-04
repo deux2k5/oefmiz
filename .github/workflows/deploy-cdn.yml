@@ -1,13 +1,10 @@
 name: Deploy to GitHub Pages CDN
 
 on:
-  workflow_run:
-    workflows: ["Release DCS Mission"]
-    types:
-      - completed
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -33,13 +30,16 @@ jobs:
         
       - name: Create CDN directory structure
         run: |
-          mkdir -p cdn
-          cp missions.json cdn/
+          mkdir -p _site
+          cp missions.json _site/
+          if ls *.miz 1> /dev/null 2>&1; then
+            echo "Found .miz files"
+          fi
           
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './cdn'
+          path: './_site'
           
       - name: Deploy to GitHub Pages
         id: deployment
