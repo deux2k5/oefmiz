@@ -2,10 +2,9 @@ name: Release DCS Mission
 
 on:
   push:
-    paths:
-      - '*.miz'
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   release:
@@ -18,7 +17,11 @@ jobs:
     - name: Get mission file info
       id: mission_info
       run: |
-        MIZ_FILE=$(ls *.miz | head -1)
+        MIZ_FILE=$(ls *.miz 2>/dev/null | head -1)
+        if [ -z "$MIZ_FILE" ]; then
+          echo "No .miz file found"
+          exit 0
+        fi
         echo "miz_file=$MIZ_FILE" >> $GITHUB_OUTPUT
         VERSION=$(echo $MIZ_FILE | grep -oP 'v\K[0-9]+\.[0-9]+\.[0-9]+')
         echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -27,7 +30,12 @@ jobs:
         FILE_SIZE=$(stat -c%s "$MIZ_FILE")
         echo "file_size=$FILE_SIZE" >> $GITHUB_OUTPUT
         
+    - name: Check if release needed
+      if: steps.mission_info.outputs.miz_file != ''
+      run: echo "Mission file found, proceeding with release"
+      
     - name: Update missions.json
+      if: steps.mission_info.outputs.miz_file != ''
       run: |
         cat > missions.json << EOF
         {
@@ -47,6 +55,7 @@ jobs:
         EOF
         
     - name: Create Release
+      if: steps.mission_info.outputs.miz_file != ''
       id: create_release
       uses: actions/create-release@v1
       env:
@@ -66,6 +75,7 @@ jobs:
         prerelease: false
         
     - name: Upload Mission File
+      if: steps.mission_info.outputs.miz_file != ''
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,6 +86,7 @@ jobs:
         asset_content_type: application/zip
         
     - name: Commit updated manifest
+      if: steps.mission_info.outputs.miz_file != ''
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
